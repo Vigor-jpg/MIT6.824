@@ -11,7 +11,6 @@ import "os"
 import "net/rpc"
 import "net/http"
 
-
 const IDLE int = 2
 const SEND int = 1
 const COMPETE int = 0
@@ -19,29 +18,34 @@ const COMPETE int = 0
 const Map int = 0
 const Reduce int = 1
 const Empty int = 2
+const FinishAll = 3
+
+const ReduceDir string = "mr/"
+const MapDir string = "main/"
+
 type Task struct {
-	Type int
+	Type     int
 	FileName string
-	Status int
-	Time time.Time
+	Status   int
+	Time     time.Time
 }
 type Coordinator struct {
 	// Your definitions here.
 	mutex sync.Mutex
 
-	nMap int
+	nMap    int
 	nReduce int
 
-	nMapSend int
+	nMapSend    int
 	nReduceSend int
 
-	nMapFinished int
+	nMapFinished    int
 	nReduceFinished int
 
-	maps []Task
+	maps        []Task
 	mapFinished bool
 
-	reduces []Task
+	reduces        []Task
 	reduceFinished bool
 }
 
@@ -56,25 +60,25 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	reply.Y = args.X + 1
 	return nil
 }
-func (c *Coordinator)MapTaskAssign(task *TaskAssignReply)  {
-	if c.nMapSend < c.nMap{
+func (c *Coordinator) MapTaskAssign(task *TaskAssignReply) {
+	if c.nMapSend < c.nMap {
 		*task = TaskAssignReply{
-			FileName: c.maps[c.nMapSend].FileName,
+			FileName:  c.maps[c.nMapSend].FileName,
 			TaskIndex: c.nMapSend,
-			Type: Map,
+			Type:      Map,
 		}
 		c.maps[c.nMapSend].Time = time.Now()
 		c.maps[c.nMapSend].Status = SEND
 		c.nMapSend++
-	}else{
-		for i,t := range c.maps{
-			if t.Status == SEND{
+	} else {
+		for i, t := range c.maps {
+			if t.Status == SEND {
 				usedTime := time.Since(t.Time)
-				if usedTime > 10*time.Second{
+				if usedTime > 10*time.Second {
 					*task = TaskAssignReply{
-						FileName: task.FileName,
+						FileName:  task.FileName,
 						TaskIndex: i,
-						Type: Map,
+						Type:      Map,
 					}
 					t.Time = time.Now()
 					return
@@ -84,25 +88,29 @@ func (c *Coordinator)MapTaskAssign(task *TaskAssignReply)  {
 		(*task).Type = Empty
 	}
 }
-func (c *Coordinator)ReduceTaskAssign(task *TaskAssignReply)  {
-	if c.nReduceSend < c.nReduce{
+func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
+	if c.nReduceSend < c.nReduce {
 		*task = TaskAssignReply{
-			FileName: c.maps[c.nReduceSend].FileName,
+			FileName:  c.maps[c.nReduceSend].FileName,
 			TaskIndex: c.nReduceSend,
-			Type: Reduce,
+			Type:      Reduce,
+			nReduce:   c.nReduce,
+			nMaps:     c.nMap,
 		}
 		c.reduces[c.nReduceSend].Time = time.Now()
 		c.reduces[c.nReduceSend].Status = SEND
 		c.nReduceSend++
-	}else{
-		for i,t := range c.reduces{
-			if t.Status == SEND{
+	} else {
+		for i, t := range c.reduces {
+			if t.Status == SEND {
 				usedTime := time.Since(t.Time)
-				if usedTime > 10*time.Second{
+				if usedTime > 10*time.Second {
 					*task = TaskAssignReply{
-						FileName: task.FileName,
+						FileName:  task.FileName,
 						TaskIndex: i,
-						Type: Reduce,
+						Type:      Reduce,
+						nReduce:   c.nReduce,
+						nMaps:     c.nMap,
 					}
 					t.Time = time.Now()
 					return
@@ -112,27 +120,29 @@ func (c *Coordinator)ReduceTaskAssign(task *TaskAssignReply)  {
 		(*task).Type = Empty
 	}
 }
-func (c *Coordinator)TaskAssign(task *TaskAssignReply)  {
+func (c *Coordinator) TaskAssign(task *TaskAssignReply) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if !c.mapFinished{
+	if !c.mapFinished {
 		c.MapTaskAssign(task)
-	}else if !c.reduceFinished {
+	} else if !c.reduceFinished {
 		c.ReduceTaskAssign(task)
+	} else {
+		task.Type = FinishAll
 	}
 }
 
-func (c *Coordinator)MapCompete(args MapCompeteArgs)  {
+func (c *Coordinator) MapCompete(args MapCompeteArgs) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.maps[args.TaskIndex].Status = COMPETE
 	c.nMapFinished++
-	if c.nMapFinished == c.nMap{
+	if c.nMapFinished == c.nMap {
 		c.mapFinished = true
 	}
 }
 
-func (c *Coordinator)ReduceCompete(args ReduceCompeteArgs)  {
+func (c *Coordinator) ReduceCompete(args ReduceCompeteArgs) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.reduces[args.TaskIndex].Status = COMPETE
@@ -141,6 +151,7 @@ func (c *Coordinator)ReduceCompete(args ReduceCompeteArgs)  {
 		c.reduceFinished = true
 	}
 }
+
 //
 // start a thread that listens for RPCs from worker.go
 //
@@ -165,7 +176,7 @@ func (c *Coordinator) Done() bool {
 	ret := false
 
 	// Your code here.
-	if c.mapFinished && c.reduceFinished{
+	if c.mapFinished && c.reduceFinished {
 		ret = true
 	}
 	return ret
@@ -179,33 +190,33 @@ func (c *Coordinator) Done() bool {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	len := len(files)
 	c := Coordinator{
-		nReduce: nReduce,
-		nMap: len,
-		nMapFinished: 0,
+		nReduce:         nReduce,
+		nMap:            len,
+		nMapFinished:    0,
 		nReduceFinished: 0,
-		maps: make([]Task,len),
-		reduces: make([]Task,nReduce),
-		reduceFinished: false,
-		mapFinished: false,
+		maps:            make([]Task, len),
+		reduces:         make([]Task, nReduce),
+		reduceFinished:  false,
+		mapFinished:     false,
 	}
 	// Your code here
-	for i,file := range files{
+	for i, file := range files {
 		c.maps[i] = Task{
 			FileName: file,
-			Status: IDLE,
-			Type: Map,
+			Status:   IDLE,
+			Type:     Map,
 		}
 	}
-	for i:=0;i<nReduce;i++{
-		fileName := fmt.Sprintf("%s%d%s","mr-",i,".txt")
-		_,err := os.Create(fileName)
-		if err != nil{
+	for i := 0; i < nReduce; i++ {
+		fileName := fmt.Sprintf("%s%d%s", "mr-", i, ".txt")
+		_, err := os.Create(fileName)
+		if err != nil {
 			panic("创建文件失败")
 		}
 		c.reduces[i] = Task{
-			FileName:fileName,
-			Status: IDLE,
-			Type: Reduce,
+			FileName: fileName,
+			Status:   IDLE,
+			Type:     Reduce,
 		}
 	}
 	c.server()
