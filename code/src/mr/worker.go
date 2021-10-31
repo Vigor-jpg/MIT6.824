@@ -32,6 +32,7 @@ func ihash(key string) int {
 // main/mrworker.go calls this function.
 //
 func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
+	fmt.Println("domap has been start!")
 	content := readFile(task.FileName)
 	kva := mapf(task.FileName, content)
 	maps := make(map[string]int, 0)
@@ -43,12 +44,18 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 			maps[kv.Key] = 1
 		}
 	}
+	fmt.Println("domap: read over!")
 	write := make([]string, task.nReduce)
 	for k, v := range maps {
 		str := fmt.Sprintf("%s:%d,", k, v)
+		fmt.Println(k)
+		fmt.Println(task.nReduce)
 		hash := ihash(k) % task.nReduce
+		fmt.Println(hash)
 		write[hash] += str
+		fmt.Println(write[hash])
 	}
+	fmt.Println("domap: map over")
 	for i, str := range write {
 		fileName := fmt.Sprintf("%s/mr-%d-%d.txt", ReduceDir, task.TaskIndex, i)
 		file, err2 := os.Create(fileName)
@@ -60,6 +67,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 			panic(err3)
 		}
 	}
+	fmt.Println("domap: writefile over")
 	args := MapCompeteArgs{
 		TaskIndex: task.TaskIndex,
 	}

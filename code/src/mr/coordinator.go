@@ -66,6 +66,7 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 			FileName:  c.maps[c.nMapSend].FileName,
 			TaskIndex: c.nMapSend,
 			Type:      Map,
+			nReduce:   c.nReduce,
 		}
 		c.maps[c.nMapSend].Time = time.Now()
 		c.maps[c.nMapSend].Status = SEND
@@ -79,6 +80,7 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 						FileName:  task.FileName,
 						TaskIndex: i,
 						Type:      Map,
+						nReduce:   c.nReduce,
 					}
 					t.Time = time.Now()
 					return
@@ -195,6 +197,7 @@ func (c *Coordinator) Done() bool {
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	len := len(files)
+	fmt.Println(nReduce)
 	c := Coordinator{
 		nReduce:         nReduce,
 		nMap:            len,
@@ -205,6 +208,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		reduceFinished:  false,
 		mapFinished:     false,
 	}
+	fmt.Println(c.nReduce)
 	// Your code here
 	for i, file := range files {
 		c.maps[i] = Task{
