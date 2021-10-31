@@ -64,7 +64,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 		TaskIndex: task.TaskIndex,
 	}
 	reply := MapCompeteReply{}
-	call("Coordinator.MapCompete", args, &reply)
+	call("Coordinator.MapCompete", &args, &reply)
 }
 func DoReduce(reply TaskAssignReply) {
 	var content string
@@ -97,7 +97,7 @@ func DoReduce(reply TaskAssignReply) {
 		TaskIndex: reply.TaskIndex,
 	}
 	rep := ReduceCompeteReply{}
-	call("Coordinator.ReduceCompete", args, &rep)
+	call("Coordinator.ReduceCompete", &args, &rep)
 }
 func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
@@ -106,7 +106,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	for {
 		args := TaskAssignArgs{}
 		reply := TaskAssignReply{}
-		call("Coordinator.TaskAssign", args, &reply)
+		call("Coordinator.TaskAssign", &args, &reply)
 		if reply.Type == Map {
 			DoMap(mapf, reply)
 		} else if reply.Type == Reduce {
