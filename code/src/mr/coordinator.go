@@ -68,7 +68,7 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 			FileName:  c.maps[c.nMapSend].FileName,
 			TaskIndex: c.nMapSend,
 			Type:      Map,
-			nReduce:   10,
+			NReduce:   10,
 		}
 		c.maps[c.nMapSend].Time = time.Now()
 		c.maps[c.nMapSend].Status = SEND
@@ -84,7 +84,7 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 						FileName:  task.FileName,
 						TaskIndex: i,
 						Type:      Map,
-						nReduce:   c.nReduce,
+						NReduce:   c.nReduce,
 					}
 					t.Time = time.Now()
 					return
@@ -100,8 +100,8 @@ func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 			FileName:  c.maps[c.nReduceSend].FileName,
 			TaskIndex: c.nReduceSend,
 			Type:      Reduce,
-			nReduce:   c.nReduce,
-			nMaps:     c.nMap,
+			NReduce:   c.nReduce,
+			NMaps:     c.nMap,
 		}
 		c.reduces[c.nReduceSend].Time = time.Now()
 		c.reduces[c.nReduceSend].Status = SEND
@@ -115,8 +115,8 @@ func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 						FileName:  task.FileName,
 						TaskIndex: i,
 						Type:      Reduce,
-						nReduce:   c.nReduce,
-						nMaps:     c.nMap,
+						NReduce:   c.nReduce,
+						NMaps:     c.nMap,
 					}
 					t.Time = time.Now()
 					return

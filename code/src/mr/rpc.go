@@ -30,8 +30,8 @@ type TaskAssignReply struct {
 	Type      int
 	FileName  string
 	TaskIndex int
-	nReduce   int
-	nMaps     int
+	NReduce   int
+	NMaps     int
 }
 
 type MapCompeteArgs struct {

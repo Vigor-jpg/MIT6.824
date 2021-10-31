@@ -45,15 +45,15 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 		}
 	}
 	fmt.Println("domap: read over!")
-	write := make([]string, task.nReduce)
+	write := make([]string, task.NReduce)
 	for k, v := range maps {
 		str := fmt.Sprintf("%s:%d,", k, v)
 		fmt.Println(k)
 		fmt.Println(task.FileName)
 		fmt.Println(task.TaskIndex)
 		fmt.Println(task.Type)
-		fmt.Println(task.nReduce)
-		hash := ihash(k) % task.nReduce
+		fmt.Println(task.NReduce)
+		hash := ihash(k) % task.NReduce
 		fmt.Println(hash)
 		write[hash] += str
 		fmt.Println(write[hash])
@@ -79,7 +79,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 }
 func DoReduce(reply TaskAssignReply) {
 	var content string
-	for i := 0; i < reply.nMaps; i++ {
+	for i := 0; i < reply.NMaps; i++ {
 		fileName := fmt.Sprintf("%s/mr-%d-%d.txt", ReduceDir, i, reply.TaskIndex)
 		file, err := os.Open(fileName)
 		if err != nil {
