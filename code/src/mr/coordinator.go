@@ -62,16 +62,20 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 	if c.nMapSend < c.nMap {
+		fmt.Println(c.nMapSend)
+		fmt.Println(c.nReduce)
 		*task = TaskAssignReply{
 			FileName:  c.maps[c.nMapSend].FileName,
 			TaskIndex: c.nMapSend,
 			Type:      Map,
-			nReduce:   c.nReduce,
+			nReduce:   10,
 		}
 		c.maps[c.nMapSend].Time = time.Now()
 		c.maps[c.nMapSend].Status = SEND
 		c.nMapSend++
 	} else {
+		fmt.Println("-----------")
+		fmt.Println(c.nMapSend)
 		for i, t := range c.maps {
 			if t.Status == SEND {
 				usedTime := time.Since(t.Time)

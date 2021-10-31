@@ -49,6 +49,9 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 	for k, v := range maps {
 		str := fmt.Sprintf("%s:%d,", k, v)
 		fmt.Println(k)
+		fmt.Println(task.FileName)
+		fmt.Println(task.TaskIndex)
+		fmt.Println(task.Type)
 		fmt.Println(task.nReduce)
 		hash := ihash(k) % task.nReduce
 		fmt.Println(hash)
