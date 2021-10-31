@@ -21,8 +21,10 @@ func readFile(fileName string) string {
 func StringParse(content string) []KeyValue {
 	maps := make(map[string]int)
 	var res []KeyValue
+	fmt.Println(content)
 	array := strings.Split(content, ",")
 	for _, str := range array {
+		fmt.Println(str)
 		kv := strings.Split(str, ":")
 		num1, err2 := strconv.Atoi(kv[1])
 		if err2 != nil {

@@ -139,7 +139,7 @@ func (c *Coordinator) TaskAssign(args *TaskAssignArgs,task *TaskAssignReply) err
 	return nil
 }
 
-func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply MapCompeteReply) error{
+func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply *MapCompeteReply) error{
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.maps[args.TaskIndex].Status = COMPETE
@@ -150,7 +150,7 @@ func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply MapCompeteReply) err
 	return nil
 }
 
-func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply ReduceCompeteReply) error{
+func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply *ReduceCompeteReply) error{
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.reduces[args.TaskIndex].Status = COMPETE
