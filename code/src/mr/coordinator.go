@@ -120,7 +120,7 @@ func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 		(*task).Type = Empty
 	}
 }
-func (c *Coordinator) TaskAssign(task *TaskAssignReply) {
+func (c *Coordinator) TaskAssign(args TaskAssignArgs,task *TaskAssignReply) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if !c.mapFinished {
@@ -132,7 +132,7 @@ func (c *Coordinator) TaskAssign(task *TaskAssignReply) {
 	}
 }
 
-func (c *Coordinator) MapCompete(args MapCompeteArgs) {
+func (c *Coordinator) MapCompete(args MapCompeteArgs,reply MapCompeteReply) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.maps[args.TaskIndex].Status = COMPETE
@@ -142,7 +142,7 @@ func (c *Coordinator) MapCompete(args MapCompeteArgs) {
 	}
 }
 
-func (c *Coordinator) ReduceCompete(args ReduceCompeteArgs) {
+func (c *Coordinator) ReduceCompete(args ReduceCompeteArgs,reply ReduceCompeteReply) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.reduces[args.TaskIndex].Status = COMPETE
