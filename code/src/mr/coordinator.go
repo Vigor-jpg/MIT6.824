@@ -165,7 +165,10 @@ func (c *Coordinator) server() {
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
-	go http.Serve(l, nil)
+	go func(){
+		_ = http.Serve(l,nil)
+		fmt.Println("Server has been start")
+	}()
 }
 
 //
