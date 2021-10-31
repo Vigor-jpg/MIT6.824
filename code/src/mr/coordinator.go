@@ -207,6 +207,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		reduces:         make([]Task, nReduce),
 		reduceFinished:  false,
 		mapFinished:     false,
+		nReduceSend:     0,
 	}
 	fmt.Println(c.nReduce)
 	// Your code here
