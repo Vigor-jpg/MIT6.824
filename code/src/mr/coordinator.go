@@ -60,7 +60,7 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	reply.Y = args.X + 1
 	return nil
 }
-func (c *Coordinator) MapTaskAssign(task *TaskAssignReply) {
+func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 	if c.nMapSend < c.nMap {
 		*task = TaskAssignReply{
 			FileName:  c.maps[c.nMapSend].FileName,
@@ -120,7 +120,7 @@ func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 		(*task).Type = Empty
 	}
 }
-func (c *Coordinator) TaskAssign(args *TaskAssignArgs,task *TaskAssignReply) {
+func (c *Coordinator) TaskAssign(args *TaskAssignArgs,task *TaskAssignReply) error{
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if !c.mapFinished {
@@ -130,9 +130,10 @@ func (c *Coordinator) TaskAssign(args *TaskAssignArgs,task *TaskAssignReply) {
 	} else {
 		task.Type = FinishAll
 	}
+	return nil
 }
 
-func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply MapCompeteReply) {
+func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply MapCompeteReply) error{
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.maps[args.TaskIndex].Status = COMPETE
@@ -140,9 +141,10 @@ func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply MapCompeteReply) {
 	if c.nMapFinished == c.nMap {
 		c.mapFinished = true
 	}
+	return nil
 }
 
-func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply ReduceCompeteReply) {
+func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply ReduceCompeteReply) error{
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.reduces[args.TaskIndex].Status = COMPETE
@@ -150,6 +152,7 @@ func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply ReduceCompeteR
 	if c.nReduceFinished == c.nReduce {
 		c.reduceFinished = true
 	}
+	return nil
 }
 
 //
