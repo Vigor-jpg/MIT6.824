@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -45,6 +46,9 @@ func StringParse(content string) []KeyValue {
 		}
 		res = append(res, kv)
 	}
+	sort.SliceStable(res, func(i,j int) bool {
+		return strings.Compare(res[j].Key,res[i].Key) == 1
+	})
 	return res
 }
 func writeFile(fileName string, content string) {
