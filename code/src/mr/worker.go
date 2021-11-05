@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
+	"strings"
 	"time"
 )
 import "log"
@@ -45,14 +47,14 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 		}
 	}
 	write := make([]string, task.NReduce)
-	for k, v := range maps {
-		str := fmt.Sprintf("%s:%d,", k, v)
-		hash := ihash(k) % task.NReduce
+	for _, kv := range kva {
+		str := fmt.Sprintf("%s:%s,", kv.Key, kv.Value)
+		hash := ihash(kv.Key) % task.NReduce
 		write[hash] += str
 	}
 	//fmt.Println("domap: map over")
 	for i, str := range write {
-		fileName := fmt.Sprintf("mr-%d-%d.txt", task.TaskIndex, i)
+		fileName := fmt.Sprintf("mr-%d-%d", task.TaskIndex, i)
 		file, err2 := os.Create(fileName)
 		if err2 != nil {
 			panic(err2)
@@ -69,7 +71,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 	reply := MapCompeteReply{}
 	call("Coordinator.MapCompete", &args, &reply)
 }
-func DoReduce(reply TaskAssignReply) {
+func DoReduce(reducef func(string, []string) string,reply TaskAssignReply) {
 	var content string
 	for i := 0; i < reply.NMaps; i++ {
 		fileName := fmt.Sprintf("mr-%d-%d.txt",i, reply.TaskIndex)
@@ -92,13 +94,29 @@ func DoReduce(reply TaskAssignReply) {
 	//fmt.Println("file creat over")
 	kva := StringParse(content[0:len(content)-1])
 	//fmt.Println("StringParse Over")
+	kvb := make(map[string][]string)
 	for _, kv := range kva {
-		str := kv.Key + " " + kv.Value + "\n"
-		//fmt.Println(str)
-		_, err5 := file.WriteString(str)
-		if err5 != nil {
-			panic(err5)
+		str,ok := kvb[kv.Key]
+		if ok{
+			kvb[kv.Key] = append(str,kv.Value)
+		}else{
+			list := make([]string,1)
+			list[0] = kv.Value
+			kvb[kv.Key] = list
 		}
+	}
+	kva = make([]KeyValue,0)
+	for k,v := range kvb{
+		val := reducef(k,v)
+		//str := fmt.Sprintf("%s %s",k,val)
+		kva = append(kva,KeyValue{k,val})
+	}
+	sort.SliceStable(kva, func(i,j int) bool {
+		return strings.Compare(kva[j].Key,kva[i].Key) == 1
+	})
+	for _,kv := range kva{
+		str := fmt.Sprintf("%s %s\n",kv.Key,kv.Value)
+		writeFile(fileName,str)
 	}
 	//fmt.Println("file write over")
 	args := ReduceCompeteArgs{
@@ -118,7 +136,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		if reply.Type == Map {
 			DoMap(mapf, reply)
 		} else if reply.Type == Reduce {
-			DoReduce(reply)
+			DoReduce(reducef,reply)
 		} else if reply.Type == Empty {
 			time.Sleep(time.Second)
 		} else {

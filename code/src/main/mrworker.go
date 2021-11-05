@@ -21,8 +21,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: mrworker xxx.so\n")
 		os.Exit(1)
 	}
-
-	mapf, reducef := loadPlugin(os.Args[1])
+	mapf, reducef := loadPlugin(,os.Args[1])
 
 	mr.Worker(mapf, reducef)
 }
@@ -31,7 +30,7 @@ func main() {
 // load the application Map and Reduce functions
 // from a plugin file, e.g. ../mrapps/wc.so
 //
-func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(string, []string) string) {
+func loadPlugin(filename string,test func(string, string) []mr.KeyValue) (func(string, string) []mr.KeyValue, func(string, []string) string) {
 	p, err := plugin.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot load plugin %v", filename)
