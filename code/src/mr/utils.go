@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -20,35 +18,14 @@ func readFile(fileName string) string {
 }
 
 func StringParse(content string) []KeyValue {
-	maps := make(map[string]int)
 	var res []KeyValue
 	//fmt.Println(content)
 	array := strings.Split(content, ",")
 	for _, str := range array {
 		//fmt.Println(str)
 		kv := strings.Split(str, ":")
-		num1, err2 := strconv.Atoi(kv[1])
-		if err2 != nil {
-			panic(err2)
-		}
-		num, ok := maps[kv[0]]
-		if ok {
-			maps[kv[0]] = num + num1
-		} else {
-			maps[kv[0]] = num1
-		}
+		res = append(res,KeyValue{kv[0],kv[1]})
 	}
-	for k, v := range maps {
-		num := strconv.Itoa(v)
-		kv := KeyValue{
-			Key:   k,
-			Value: num,
-		}
-		res = append(res, kv)
-	}
-	sort.SliceStable(res, func(i,j int) bool {
-		return strings.Compare(res[j].Key,res[i].Key) == 1
-	})
 	return res
 }
 func writeFile(fileName string, content string) {
