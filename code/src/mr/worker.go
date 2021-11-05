@@ -116,7 +116,10 @@ func DoReduce(reducef func(string, []string) string,reply TaskAssignReply) {
 	})
 	for _,kv := range kva{
 		str := fmt.Sprintf("%s %s\n",kv.Key,kv.Value)
-		writeFile(fileName,str)
+		_,err4 = file.WriteString(str)
+		if err4 != nil{
+			log.Fatal(err4)
+		}
 	}
 	//fmt.Println("file write over")
 	args := ReduceCompeteArgs{
