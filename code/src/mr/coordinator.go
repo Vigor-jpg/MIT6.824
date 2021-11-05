@@ -185,12 +185,8 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
-<<<<<<< HEAD
-
-=======
 	c.mutex.Lock()
         defer c.mutex.Unlock()
->>>>>>> bd918dc409ae73dca87bcf4116baba27ec2632e0
 	ret := false
 
 	// Your code here.

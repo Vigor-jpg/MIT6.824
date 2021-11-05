@@ -74,7 +74,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 func DoReduce(reducef func(string, []string) string,reply TaskAssignReply) {
 	var content string
 	for i := 0; i < reply.NMaps; i++ {
-		fileName := fmt.Sprintf("mr-%d-%d.txt",i, reply.TaskIndex)
+		fileName := fmt.Sprintf("mr-%d-%d",i, reply.TaskIndex)
 		file, err := os.Open(fileName)
 		if err != nil {
 			log.Fatal(err)
