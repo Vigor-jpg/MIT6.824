@@ -52,7 +52,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 	}
 	//fmt.Println("domap: map over")
 	for i, str := range write {
-		fileName := fmt.Sprintf("mr-%d-%d.txt", task.TaskIndex, i)
+		fileName := fmt.Sprintf("mr-%d-%d", task.TaskIndex, i)
 		file, err2 := os.Create(fileName)
 		if err2 != nil {
 			panic(err2)
@@ -72,7 +72,7 @@ func DoMap(mapf func(string, string) []KeyValue, task TaskAssignReply) {
 func DoReduce(reply TaskAssignReply) {
 	var content string
 	for i := 0; i < reply.NMaps; i++ {
-		fileName := fmt.Sprintf("mr-%d-%d.txt",i, reply.TaskIndex)
+		fileName := fmt.Sprintf("mr-%d-%d",i, reply.TaskIndex)
 		file, err := os.Open(fileName)
 		if err != nil {
 			log.Fatal(err)
@@ -83,15 +83,15 @@ func DoReduce(reply TaskAssignReply) {
 		}
 		content += string(str)
 	}
-	//fmt.Println("doreduce read over")
+	fmt.Println("doreduce read over")
 	fileName := fmt.Sprintf("mr-out-%d", reply.TaskIndex)
 	file, err4 := os.Create(fileName)
 	if err4 != nil {
 		panic(err4)
 	}
-	//fmt.Println("file creat over")
+	fmt.Println("file creat over")
 	kva := StringParse(content[0:len(content)-1])
-	//fmt.Println("StringParse Over")
+	fmt.Println("StringParse Over")
 	for _, kv := range kva {
 		str := kv.Key + " " + kv.Value + "\n"
 		//fmt.Println(str)
@@ -100,7 +100,7 @@ func DoReduce(reply TaskAssignReply) {
 			panic(err5)
 		}
 	}
-	//fmt.Println("file write over")
+	fmt.Println("file write over")
 	args := ReduceCompeteArgs{
 		TaskIndex: reply.TaskIndex,
 	}

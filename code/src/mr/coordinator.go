@@ -68,7 +68,7 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 			FileName:  c.maps[c.nMapSend].FileName,
 			TaskIndex: c.nMapSend,
 			Type:      Map,
-			NReduce:   10,
+			NReduce:   c.nReduce,
 		}
 		c.maps[c.nMapSend].Time = time.Now()
 		c.maps[c.nMapSend].Status = SEND
@@ -97,7 +97,6 @@ func (c *Coordinator) MapTaskAssign(task *TaskAssignReply){
 func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 	if c.nReduceSend < c.nReduce {
 		*task = TaskAssignReply{
-			FileName:  c.maps[c.nReduceSend].FileName,
 			TaskIndex: c.nReduceSend,
 			Type:      Reduce,
 			NReduce:   c.nReduce,
@@ -112,7 +111,6 @@ func (c *Coordinator) ReduceTaskAssign(task *TaskAssignReply) {
 				usedTime := time.Since(t.Time)
 				if usedTime > 10*time.Second {
 					*task = TaskAssignReply{
-						FileName:  task.FileName,
 						TaskIndex: i,
 						Type:      Reduce,
 						NReduce:   c.nReduce,
@@ -144,6 +142,7 @@ func (c *Coordinator) MapCompete(args *MapCompeteArgs,reply *MapCompeteReply) er
 	defer c.mutex.Unlock()
 	c.maps[args.TaskIndex].Status = COMPETE
 	c.nMapFinished++
+	fmt.Sprintf("map has been finished  %d", c.nMapFinished)
 	if c.nMapFinished == c.nMap {
 		c.mapFinished = true
 	}
@@ -154,7 +153,8 @@ func (c *Coordinator) ReduceCompete(args *ReduceCompeteArgs,reply *ReduceCompete
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.reduces[args.TaskIndex].Status = COMPETE
-	c.nMapFinished++
+	c.nReduceFinished++
+	fmt.Sprintf("reduce has been finished  %d", c.nReduceFinished)
 	if c.nReduceFinished == c.nReduce {
 		c.reduceFinished = true
 	}
@@ -185,6 +185,8 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
+	c.mutex.Lock()
+        defer c.mutex.Unlock()
 	ret := false
 
 	// Your code here.
@@ -223,13 +225,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		}
 	}
 	for i := 0; i < nReduce; i++ {
-		fileName := fmt.Sprintf("%s%d%s", "mr-", i, ".txt")
-		_, err := os.Create(fileName)
-		if err != nil {
-			panic("创建文件失败")
-		}
 		c.reduces[i] = Task{
-			FileName: fileName,
 			Status:   IDLE,
 			Type:     Reduce,
 		}
