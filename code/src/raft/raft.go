@@ -18,7 +18,6 @@ package raft
 //
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -26,7 +25,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-//	"6.824/labgob"
+	//	"6.824/labgob"
 	"6.824/labrpc"
 )
 const Leader int = 0
@@ -86,6 +85,8 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	term = rf.currentTerm
 	isleader = rf.identity == Leader
 	return term, isleader
@@ -160,18 +161,24 @@ type AppendEntriesReply struct {
 	Success bool
 }
 
-func (rf *Raft)AppendEntries(args *AppendEntriesArgs,reply *AppendEntriesReply)  {
+func (rf *Raft)AppendEntries(args *AppendEntriesArgs,reply *AppendEntriesReply){
 	rf.mu.Lock()
-	defer rf.mu.Unlock()
+	//defer rf.mu.Unlock()
+	//fmt.Printf("raft %d has been rec the heartbeat\n",rf.me)
 	rf.electionTimer = time.Now()
+	rf.mu.Unlock()
 }
-func (rf *Raft)sendAppendEntries(server int,args *AppendEntriesArgs,reply *AppendEntriesReply)  {
+func (rf *Raft)sendAppendEntries(server int,args *AppendEntriesArgs,reply *AppendEntriesReply) {
 	//rf.mu.Lock()
-	rf.peers[server].Call("Raft.AppendEntries",args,reply)
+	//fmt.Printf("been send the heartbeat to raft %d",server)
+	rf.peers[server].Call("Raft.AppendEntries", args, reply)
 	//rf.mu.Unlock()
 }
 func (rf *Raft)sendAppendEntriesToPeers()  {
 	for i:= 0;i < len(rf.peers);i++{
+		if i == rf.me{
+			continue
+		}
 		args := AppendEntriesArgs{
 			Term: rf.currentTerm,
 			LeaderId: rf.me,
@@ -179,13 +186,15 @@ func (rf *Raft)sendAppendEntriesToPeers()  {
 		reply := AppendEntriesReply{
 
 		}
-		rf.sendAppendEntries(i,&args,&reply)
+		go rf.sendAppendEntries(i,&args,&reply)
 	}
 }
 func (rf *Raft)heartBeats()  {
 	for rf.killed() == false{
+		//fmt.Printf("raft %d has been send the heartbeat\n",rf.me)
 		rf.sendAppendEntriesToPeers()
-		time.Sleep(time.Duration(100)*time.Microsecond)
+		time.Sleep(time.Duration(100)*time.Millisecond)
+		//break
 	}
 }
 //
@@ -213,12 +222,15 @@ type RequestVoteReply struct {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
+	//fmt.Printf("raft %d has been rec vote from raft %d and voteFor = %d",rf.me,args.CandidateId,rf.voteFor)
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	if rf.currentTerm > args.Term{
-		return
+		rf.currentTerm = args.Term
+		rf.transitToFollower()
 	}
-	if rf.voteFor != -1{
+	if rf.voteFor == -1{
+		//fmt.Printf("raft %d has been vote for raft %d",rf.me,args.CandidateId)
 		rf.voteFor = args.CandidateId
 		reply.VoteGranted = true
 		reply.Term = rf.currentTerm
@@ -255,30 +267,40 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 // the struct itself.
 //
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply){
-	rf.mu.Lock()
+	//rf.mu.Lock()
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
-	rf.mu.Unlock()
+	//rf.mu.Unlock()
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	if reply.Term > rf.currentTerm{
 		rf.currentTerm = reply.Term
 		rf.transitToFollower()
+		//fmt.Printf("has bean ")
 		return
 	}
 	if args.Term < rf.currentTerm{
+		//fmt.Printf("term fail")
 		return
 	}
 	if ok && reply.VoteGranted{
+		//fmt.Printf("raft %d has rec a vote and Votenum = %d",rf.me,rf.voteNum)
 		rf.voteNum++
 		if rf.voteNum > len(rf.peers)/2{
 			//转换为Leader
+			//fmt.Printf("raft %d has been become to leader",rf.me)
 			rf.transitToLeader()
 		}
 	}
 }
 func (rf *Raft)sendRequestVoteToPeers()  {
+	//fmt.Println("has been rec elect")
+	rf.mu.Lock()
+
 	rf.currentTerm++
 	rf.electionTimer = time.Now()
-	t := rand.Intn(100)+200
-	rf.electionTimeout = time.Duration(t)*time.Microsecond
+	t := rand.Intn(200)+100
+	rf.electionTimeout = time.Duration(t)*time.Millisecond
+	rf.mu.Unlock()
 	for i := 0;i < len(rf.peers);i++{
 		if rf.me == i{
 			continue
@@ -289,19 +311,30 @@ func (rf *Raft)sendRequestVoteToPeers()  {
 		}
 		reply := RequestVoteReply{
 		}
+		//fmt.Printf("raft %d has been send vote to raft %d",rf.me,i)
 		go rf.sendRequestVote(i,&args,&reply)
 	}
 }
 
 func (rf *Raft)transitToLeader()  {
+	rf.mu.Lock()
 	rf.identity = Leader
-	rf.heartBeats()
+	rf.mu.Unlock()
+	go rf.heartBeats()
 }
 func (rf *Raft)transitToFollower()  {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	rf.voteFor = -1
 	rf.identity = Follower
 }
 func (rf *Raft)transitToCandidate()  {
+	rf.mu.Lock()
+	rf.voteNum = 1
+	rf.voteFor = rf.me
+	rf.currentTerm++
 	rf.identity = Candidate
+	rf.mu.Unlock()
 }
 //
 // the service using Raft (e.g. a k/v server) wants to start
@@ -355,12 +388,23 @@ func (rf *Raft) ticker() {
 		// be started and to randomize sleeping time using
 		// time.Sleep().
 		//time.Sleep(time.Duration(t)*time.Microsecond)
+		//fmt.Printf("since %d\n",time.Since(rf.electionTimer))
+		//fmt.Printf("timeout %d\n",rf.electionTimeout)
+		//fmt.Printf("raft %d has been start a election\n",rf.me)
+		rf.mu.Lock()
 		if time.Since(rf.electionTimer) > rf.electionTimeout && rf.identity != Leader{
-			fmt.Println("start send mesege")
+			//fmt.Println("start send mesege")
+			//fmt.Printf("since %d\n",time.Since(rf.electionTimer))
+			//fmt.Printf("timeout %d\n",rf.electionTimeout)
+			//fmt.Printf("raft %d has been start a election\n",rf.me)
+			//rf.mu.Unlock()
 			rf.transitToCandidate()
 			rf.sendRequestVoteToPeers()
+		}else{
+			//rf.mu.Unlock()
 		}
-		time.Sleep(time.Duration(50)*time.Microsecond)
+		rf.mu.Unlock()
+		time.Sleep(time.Duration(50)*time.Millisecond)
 	}
 }
 
@@ -378,26 +422,26 @@ func (rf *Raft) ticker() {
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
+	//rf.mu.Lock()
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
 	rf.electionTimer = time.Now()
-	rf.electionTimeout = time.Duration(rand.Intn(200)+150)
+	rf.electionTimeout = time.Duration(rand.Intn(300)+150)*time.Millisecond
 	rf.heartBeat = time.Duration(150)
-	// Your initialization code here (2A, 2B, 2C).
-
+	rf.currentTerm = 1
 	rf.voteFor = -1
+
+	// initialize from state persisted before a crash
+	rf.readPersist(persister.ReadRaftState())
+	// start ticker goroutine to start elections
+
 	if me == 0{
 		rf.transitToLeader()
 	}else{
 		rf.identity = Follower
 	}
-	rf.currentTerm = 0
-	// initialize from state persisted before a crash
-	rf.readPersist(persister.ReadRaftState())
-	// start ticker goroutine to start elections
-	//time.Sleep(time.Duration(500)*time.Microsecond)
-	fmt.Println("start election")
+	//rf.mu.Unlock()
 	go rf.ticker()
 	return rf
 }

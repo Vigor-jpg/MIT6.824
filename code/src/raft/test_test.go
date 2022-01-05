@@ -21,17 +21,17 @@ const RaftElectionTimeout = 1000 * time.Millisecond
 
 func TestInitialElection2A(t *testing.T) {
 	servers := 3
-	fmt.Printf("1cheack has been over\n")
+	//fmt.Printf("1cheack has been over\n")
 	cfg := make_config(t, servers, false, false)
-	fmt.Printf("1cheack has been over\n")
+	//fmt.Printf("1cheack has been over\n")
 	defer cfg.cleanup()
-	fmt.Printf("1cheack has been over\n")
+	//fmt.Printf("1cheack has been over\n")
 	cfg.begin("Test (2A): initial election")
-	fmt.Printf("1cheack has been over\n")
+	//fmt.Printf("1cheack has been over\n")
 	// is a leader elected?
-	fmt.Printf("2cheack has been over\n")
+	//fmt.Printf("2cheack has been over\n")
 	cfg.checkOneLeader()
-	fmt.Printf("3cheack has been over\n")
+	//fmt.Printf("term cheack has been over\n")
 	// sleep a bit to avoid racing with followers learning of the
 	// election, then check that all peers agree on the term.
 	time.Sleep(50 * time.Millisecond)
@@ -39,14 +39,14 @@ func TestInitialElection2A(t *testing.T) {
 	if term1 < 1 {
 		t.Fatalf("term is %v, but should be at least 1", term1)
 	}
-
+	//fmt.Printf("term1 cheack has been over\n")
 	// does the leader+term stay the same if there is no network failure?
 	time.Sleep(2 * RaftElectionTimeout)
 	term2 := cfg.checkTerms()
 	if term1 != term2 {
 		fmt.Printf("warning: term changed even though there were no failures")
 	}
-
+	//fmt.Printf("term2 cheack has been over\n")
 	// there should still be a leader.
 	cfg.checkOneLeader()
 
@@ -64,12 +64,14 @@ func TestReElection2A(t *testing.T) {
 
 	// if the leader disconnects, a new one should be elected.
 	cfg.disconnect(leader1)
+	//fmt.Printf("-----------------------------------\n")
 	cfg.checkOneLeader()
-
+	//fmt.Printf("check1-----------------------------------\n")
 	// if the old leader rejoins, that shouldn't
 	// disturb the new leader.
 	cfg.connect(leader1)
 	leader2 := cfg.checkOneLeader()
+	//fmt.Printf("check2-----------------------------------\n")
 
 	// if there's no quorum, no leader should
 	// be elected.
@@ -97,7 +99,7 @@ func TestManyElections2A(t *testing.T) {
 	cfg.begin("Test (2A): multiple elections")
 
 	cfg.checkOneLeader()
-
+	//fmt.Printf("check1-----------------------------------\n")
 	iters := 10
 	for ii := 1; ii < iters; ii++ {
 		// disconnect three nodes
@@ -111,14 +113,14 @@ func TestManyElections2A(t *testing.T) {
 		// either the current leader should still be alive,
 		// or the remaining four should elect a new one.
 		cfg.checkOneLeader()
-
+		//fmt.Printf("check2 %d-----------------------------------\n",ii)
 		cfg.connect(i1)
 		cfg.connect(i2)
 		cfg.connect(i3)
 	}
 
 	cfg.checkOneLeader()
-
+	//fmt.Printf("check3-----------------------------------\n")
 	cfg.end()
 }
 
@@ -475,7 +477,6 @@ func TestBackup2B(t *testing.T) {
 
 	cfg.end()
 }
-
 func TestCount2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)
