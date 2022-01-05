@@ -21,14 +21,17 @@ const RaftElectionTimeout = 1000 * time.Millisecond
 
 func TestInitialElection2A(t *testing.T) {
 	servers := 3
+	fmt.Printf("1cheack has been over\n")
 	cfg := make_config(t, servers, false, false)
+	fmt.Printf("1cheack has been over\n")
 	defer cfg.cleanup()
-
+	fmt.Printf("1cheack has been over\n")
 	cfg.begin("Test (2A): initial election")
-
+	fmt.Printf("1cheack has been over\n")
 	// is a leader elected?
+	fmt.Printf("2cheack has been over\n")
 	cfg.checkOneLeader()
-
+	fmt.Printf("3cheack has been over\n")
 	// sleep a bit to avoid racing with followers learning of the
 	// election, then check that all peers agree on the term.
 	time.Sleep(50 * time.Millisecond)
