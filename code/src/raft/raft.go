@@ -166,7 +166,6 @@ func (rf *Raft)sendAppendEntries(server int,args *AppendEntriesArgs,reply *Appen
 	//rf.mu.Lock()
 	rf.peers[server].Call("Raft.AppendEntries",args,reply)
 	//rf.mu.Unlock()
-
 }
 func (rf *Raft)sendAppendEntriesToPeers()  {
 	for i:= 0;i < len(rf.peers);i++{
@@ -178,6 +177,12 @@ func (rf *Raft)sendAppendEntriesToPeers()  {
 
 		}
 		rf.sendAppendEntries(i,&args,&reply)
+	}
+}
+func (rf *Raft)heartBeats()  {
+	for rf.killed() == false{
+		rf.sendAppendEntriesToPeers()
+		time.Sleep(time.Duration(100)*time.Microsecond)
 	}
 }
 //
@@ -246,21 +251,25 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 // that the caller passes the address of the reply struct with &, not
 // the struct itself.
 //
-func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
+func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply){
 	rf.mu.Lock()
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	rf.mu.Unlock()
-	if args.term < rf.currentTerm{
-		return false
+	if reply.term > rf.currentTerm{
+		rf.currentTerm = reply.term
+		rf.transitToFollower()
+		return
 	}
-	if reply.voteGranted{
+	if args.term < rf.currentTerm{
+		return
+	}
+	if ok && reply.voteGranted{
 		rf.voteNum++
 		if rf.voteNum > len(rf.peers)/2{
 			//转换为Leader
 			rf.transitToLeader()
 		}
 	}
-	return ok
 }
 func (rf *Raft)sendRequestVoteToPeers()  {
 	rf.currentTerm++
@@ -279,17 +288,16 @@ func (rf *Raft)sendRequestVoteToPeers()  {
 		}
 		go rf.sendRequestVote(i,&args,&reply)
 	}
-
 }
 
 func (rf *Raft)transitToLeader()  {
-
+	rf.identity = Leader
 }
 func (rf *Raft)transitToFollower()  {
-
+	rf.identity = Follower
 }
 func (rf *Raft)transitToCandidate()  {
-
+	rf.identity = Candidate
 }
 //
 // the service using Raft (e.g. a k/v server) wants to start
@@ -309,10 +317,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index := -1
 	term := -1
 	isLeader := true
-
 	// Your code here (2B).
-
-
 	return index, term, isLeader
 }
 
@@ -345,14 +350,10 @@ func (rf *Raft) ticker() {
 		// Your code here to check if a leader election should
 		// be started and to randomize sleeping time using
 		// time.Sleep().
-
 		//time.Sleep(time.Duration(t)*time.Microsecond)
 		if time.Since(rf.electionTimer) > rf.electionTimeout && rf.identity != Leader{
 			rf.transitToCandidate()
 			rf.sendRequestVoteToPeers()
-		}
-		if rf.identity != Leader{
-			rf.transitToFollower()
 		}
 		time.Sleep(time.Duration(50)*time.Microsecond)
 	}
@@ -387,7 +388,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.currentTerm = 0
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
-
 	// start ticker goroutine to start elections
 	go rf.ticker()
 	return rf
