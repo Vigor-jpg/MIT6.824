@@ -64,6 +64,7 @@ func TestReElection2A(t *testing.T) {
 
 	// if the leader disconnects, a new one should be elected.
 	cfg.disconnect(leader1)
+	//fmt.Printf("disconnected raft %d",leader1)
 	//fmt.Printf("-----------------------------------\n")
 	cfg.checkOneLeader()
 	//fmt.Printf("check1-----------------------------------\n")
@@ -75,6 +76,7 @@ func TestReElection2A(t *testing.T) {
 
 	// if there's no quorum, no leader should
 	// be elected.
+	//fmt.Printf("disconnected raft %d,%d",leader2,(leader2 + 1) % servers)
 	cfg.disconnect(leader2)
 	cfg.disconnect((leader2 + 1) % servers)
 	time.Sleep(2 * RaftElectionTimeout)
@@ -109,7 +111,9 @@ func TestManyElections2A(t *testing.T) {
 		cfg.disconnect(i1)
 		cfg.disconnect(i2)
 		cfg.disconnect(i3)
-
+		//fmt.Printf("disconnect raft %d\n",i1)
+		//fmt.Printf("disconnect raft %d\n",i2)
+		//fmt.Printf("disconnect raft %d\n",i3)
 		// either the current leader should still be alive,
 		// or the remaining four should elect a new one.
 		cfg.checkOneLeader()
@@ -117,6 +121,9 @@ func TestManyElections2A(t *testing.T) {
 		cfg.connect(i1)
 		cfg.connect(i2)
 		cfg.connect(i3)
+		//fmt.Printf("connect raft %d\n",i1)
+		//fmt.Printf("connect raft %d\n",i2)
+		//fmt.Printf("connect raft %d\n",i3)
 	}
 
 	cfg.checkOneLeader()
