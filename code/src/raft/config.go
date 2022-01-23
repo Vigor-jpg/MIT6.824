@@ -432,9 +432,6 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 	count := 0
 	var cmd interface{} = nil
 	for i := 0; i < len(cfg.rafts); i++ {
-		cfg.mu.Lock()
-		fmt.Printf("log map %v\n",cfg.logs)
-		cfg.mu.Unlock()
 		if cfg.applyErr[i] != "" {
 			//fmt.Printf("log map %v\n",cfg.logs)
 			cfg.t.Fatal(cfg.applyErr[i])
@@ -449,7 +446,6 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 				cfg.t.Fatalf("committed values do not match: index %v, %v, %v\n",
 					index, cmd, cmd1)
 			}
-			fmt.Printf("server == %d\n",i)
 			count += 1
 			cmd = cmd1
 		}
@@ -532,7 +528,6 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 				//fmt.Printf("nd = %d and cmd1 = %v map == %v\n",nd,cmd1,cfg.logs)
 				if nd > 0 && nd >= expectedServers {
 					// committed
-					fmt.Printf("cmd1 = %d\n",cmd1)
 					if cmd1 == cmd {
 						// and it was the command we submitted.
 						return index
@@ -555,15 +550,9 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 // print the Test message.
 // e.g. cfg.begin("Test (2B): RPC counts aren't too high")
 func (cfg *config) begin(description string) {
-	fmt.Printf("check 1")
-	fmt.Printf("%s ...\n", description)
-	fmt.Printf("check 1\n")
 	cfg.t0 = time.Now()
-	fmt.Printf("check 1\n")
 	cfg.rpcs0 = cfg.rpcTotal()
-	fmt.Printf("check 1\n")
 	cfg.bytes0 = cfg.bytesTotal()
-	fmt.Printf("check 1\n")
 	cfg.cmds0 = 0
 	cfg.maxIndex0 = cfg.maxIndex
 }
