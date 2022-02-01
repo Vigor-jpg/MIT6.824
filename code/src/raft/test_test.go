@@ -614,18 +614,27 @@ func TestPersist12C(t *testing.T) {
 	cfg.begin("Test (2C): basic persistence")
 
 	cfg.one(11, servers, true)
-
+	for i:=0;i<3;i++{
+		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
+	}
+	fmt.Printf("1-------------------------\n")
 	// crash and re-start all
 	for i := 0; i < servers; i++ {
 		cfg.start1(i, cfg.applier)
 	}
+	for i:=0;i<3;i++{
+		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
+	}
+	fmt.Printf("2-------------------------\n")
 	for i := 0; i < servers; i++ {
 		cfg.disconnect(i)
 		cfg.connect(i)
 	}
-
+	for i:=0;i<3;i++{
+		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
+	}
 	cfg.one(12, servers, true)
-
+	fmt.Printf("3-------------------------\n")
 	leader1 := cfg.checkOneLeader()
 	cfg.disconnect(leader1)
 	cfg.start1(leader1, cfg.applier)
@@ -668,7 +677,8 @@ func TestPersist22C(t *testing.T) {
 
 		cfg.disconnect((leader1 + 1) % servers)
 		cfg.disconnect((leader1 + 2) % servers)
-
+		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 1) % servers)
+		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 2) % servers)
 		cfg.one(10+index, servers-2, true)
 		index++
 
@@ -676,21 +686,31 @@ func TestPersist22C(t *testing.T) {
 		cfg.disconnect((leader1 + 3) % servers)
 		cfg.disconnect((leader1 + 4) % servers)
 
+		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 0) % servers)
+		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 3) % servers)
+		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 4) % servers)
 		cfg.start1((leader1+1)%servers, cfg.applier)
+		fmt.Printf("start rf %d --------------------------------------------------\n",(leader1+1)%servers)
 		cfg.start1((leader1+2)%servers, cfg.applier)
+		fmt.Printf("start rf %d --------------------------------------------------\n",(leader1+2)%servers)
 		cfg.connect((leader1 + 1) % servers)
+		fmt.Printf("check : rf %d is connected\n",(leader1 + 1) % servers)
 		cfg.connect((leader1 + 2) % servers)
+		fmt.Printf("check : rf %d is connected\n",(leader1 + 2) % servers)
 
 		time.Sleep(RaftElectionTimeout)
 
 		cfg.start1((leader1+3)%servers, cfg.applier)
 		cfg.connect((leader1 + 3) % servers)
+		fmt.Printf("check : rf %d is connected\n",(leader1 + 3) % servers)
 
 		cfg.one(10+index, servers-2, true)
 		index++
 
 		cfg.connect((leader1 + 4) % servers)
+		fmt.Printf("check : rf %d is connected\n",(leader1 + 4) % servers)
 		cfg.connect((leader1 + 0) % servers)
+		fmt.Printf("check : rf %d is connected\n",(leader1 + 0) % servers)
 	}
 
 	cfg.one(1000, servers, true)
