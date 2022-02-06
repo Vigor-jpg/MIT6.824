@@ -607,6 +607,8 @@ loop:
 }
 
 func TestPersist12C(t *testing.T) {
+	DeleteLog()
+	//DPrintf("new log\n")
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -614,27 +616,20 @@ func TestPersist12C(t *testing.T) {
 	cfg.begin("Test (2C): basic persistence")
 
 	cfg.one(11, servers, true)
-	for i:=0;i<3;i++{
-		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
-	}
-	fmt.Printf("1-------------------------\n")
+
+	//fmt.Printf("1-------------------------\n")
 	// crash and re-start all
 	for i := 0; i < servers; i++ {
 		cfg.start1(i, cfg.applier)
 	}
-	for i:=0;i<3;i++{
-		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
-	}
-	fmt.Printf("2-------------------------\n")
+
+	//fmt.Printf("2-------------------------\n")
 	for i := 0; i < servers; i++ {
 		cfg.disconnect(i)
 		cfg.connect(i)
 	}
-	for i:=0;i<3;i++{
-		fmt.Printf("rf %d logs = %v\n",i,cfg.rafts[i].logs)
-	}
 	cfg.one(12, servers, true)
-	fmt.Printf("3-------------------------\n")
+	//fmt.Printf("3-------------------------\n")
 	leader1 := cfg.checkOneLeader()
 	cfg.disconnect(leader1)
 	cfg.start1(leader1, cfg.applier)
@@ -663,6 +658,7 @@ func TestPersist12C(t *testing.T) {
 
 func TestPersist22C(t *testing.T) {
 	servers := 5
+	DeleteLog()
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
 
@@ -677,8 +673,8 @@ func TestPersist22C(t *testing.T) {
 
 		cfg.disconnect((leader1 + 1) % servers)
 		cfg.disconnect((leader1 + 2) % servers)
-		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 1) % servers)
-		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 2) % servers)
+		DPrintf("check : rf %d is disconnected\n",(leader1 + 1) % servers)
+		DPrintf("check : rf %d is disconnected\n",(leader1 + 2) % servers)
 		cfg.one(10+index, servers-2, true)
 		index++
 
@@ -686,31 +682,31 @@ func TestPersist22C(t *testing.T) {
 		cfg.disconnect((leader1 + 3) % servers)
 		cfg.disconnect((leader1 + 4) % servers)
 
-		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 0) % servers)
-		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 3) % servers)
-		fmt.Printf("check : rf %d is disconnected\n",(leader1 + 4) % servers)
+		DPrintf("check : rf %d is disconnected\n",(leader1 + 0) % servers)
+		DPrintf("check : rf %d is disconnected\n",(leader1 + 3) % servers)
+		DPrintf("check : rf %d is disconnected\n",(leader1 + 4) % servers)
 		cfg.start1((leader1+1)%servers, cfg.applier)
-		fmt.Printf("start rf %d --------------------------------------------------\n",(leader1+1)%servers)
+		DPrintf("start rf %d --------------------------------------------------\n",(leader1+1)%servers)
 		cfg.start1((leader1+2)%servers, cfg.applier)
-		fmt.Printf("start rf %d --------------------------------------------------\n",(leader1+2)%servers)
+		DPrintf("start rf %d --------------------------------------------------\n",(leader1+2)%servers)
 		cfg.connect((leader1 + 1) % servers)
-		fmt.Printf("check : rf %d is connected\n",(leader1 + 1) % servers)
+		DPrintf("check : rf %d is connected\n",(leader1 + 1) % servers)
 		cfg.connect((leader1 + 2) % servers)
-		fmt.Printf("check : rf %d is connected\n",(leader1 + 2) % servers)
+		DPrintf("check : rf %d is connected\n",(leader1 + 2) % servers)
 
 		time.Sleep(RaftElectionTimeout)
 
 		cfg.start1((leader1+3)%servers, cfg.applier)
 		cfg.connect((leader1 + 3) % servers)
-		fmt.Printf("check : rf %d is connected\n",(leader1 + 3) % servers)
+		DPrintf("check : rf %d is connected\n",(leader1 + 3) % servers)
 
 		cfg.one(10+index, servers-2, true)
 		index++
 
 		cfg.connect((leader1 + 4) % servers)
-		fmt.Printf("check : rf %d is connected\n",(leader1 + 4) % servers)
+		DPrintf("check : rf %d is connected\n",(leader1 + 4) % servers)
 		cfg.connect((leader1 + 0) % servers)
-		fmt.Printf("check : rf %d is connected\n",(leader1 + 0) % servers)
+		DPrintf("check : rf %d is connected\n",(leader1 + 0) % servers)
 	}
 
 	cfg.one(1000, servers, true)
@@ -719,6 +715,7 @@ func TestPersist22C(t *testing.T) {
 }
 
 func TestPersist32C(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -815,6 +812,7 @@ func TestFigure82C(t *testing.T) {
 }
 
 func TestUnreliableAgree2C(t *testing.T) {
+	DeleteLog()
 	servers := 5
 	cfg := make_config(t, servers, true, false)
 	defer cfg.cleanup()
@@ -844,6 +842,7 @@ func TestUnreliableAgree2C(t *testing.T) {
 }
 
 func TestFigure8Unreliable2C(t *testing.T) {
+	DeleteLog()
 	servers := 5
 	cfg := make_config(t, servers, true, false)
 	defer cfg.cleanup()
@@ -1044,10 +1043,12 @@ func internalChurn(t *testing.T, unreliable bool) {
 }
 
 func TestReliableChurn2C(t *testing.T) {
+	DeleteLog()
 	internalChurn(t, false)
 }
 
 func TestUnreliableChurn2C(t *testing.T) {
+	DeleteLog()
 	internalChurn(t, true)
 }
 
