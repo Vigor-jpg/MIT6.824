@@ -109,7 +109,6 @@ type LogEntry struct {
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
-
 	var term int
 	var isleader bool
 	// Your code here (2A).
@@ -717,6 +716,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		//fmt.Printf("0000000000000000000000000\n")
 		go rf.sendAppendEntries(i,&args,&reply)
 	}*/
+	rf.sendAppendEntriesToPeers()
 	term = rf.currentTerm
 	rf.persist()
 	rf.mu.Unlock()

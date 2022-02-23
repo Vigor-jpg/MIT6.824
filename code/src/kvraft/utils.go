@@ -1,17 +1,14 @@
-package raft
+package kvraft
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"log"
 	"os"
 )
 
-// Debugging
 const Debug = false
-const FileName = "../log/test.log"
+const FileName = "../log/kvRaft.log"
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	msg := fmt.Sprintf(format,a...)
 	if Debug {
@@ -42,24 +39,4 @@ func WriteLog(filePath string,str string) error{
 	}
 	defer f.Close()
 	return err
-}
-func deepCopy(dst interface{},src interface{}) error{
-	var buff bytes.Buffer
-	if err := gob.NewEncoder(&buff).Encode(src);err != nil{
-		return err
-	}
-	return gob.NewDecoder(bytes.NewBuffer(buff.Bytes())).Decode(dst)
-}
-
-func Min(a int,b int)  int{
-	if a > b{
-		return b
-	}
-	return a
-}
-func Max(a int, b int) int{
-	if a > b{
-		return a
-    }
-    return b
 }

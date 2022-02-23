@@ -200,7 +200,7 @@ func (cfg *config) makeClient(to []int) *Clerk {
 		ends[j] = cfg.net.MakeEnd(endnames[j])
 		cfg.net.Connect(endnames[j], j)
 	}
-
+	DPrintf("makeClient : makeCk\n")
 	ck := MakeClerk(random_handles(ends))
 	cfg.clerks[ck] = endnames
 	cfg.nextClientId++
