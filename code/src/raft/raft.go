@@ -348,7 +348,8 @@ func (rf *Raft)AppendEntries(args *AppendEntriesArgs,reply *AppendEntriesReply){
 		//rf.logs = rf.logs[:args.PrevLogIndex+1]
 		DPrintf("AppendEntries : rf log size = %d and commitIndex = %d\n",len(rf.logs),rf.commitIndex)
 		//rf.logs = append(rf.logs,args.Entries...)
-		go rf.commitLogs()
+		//
+		//go rf.commitLogs()
 		//fmt.Printf("rf %d Commit = %d and lasReplyed = %d\n",rf.me,rf.commitIndex,rf.lastApplied)
 	}
 	//rf.mu.Unlock()
@@ -400,7 +401,7 @@ func (rf *Raft)sendAppendEntries(server int,args *AppendEntriesArgs,reply *Appen
 		DPrintf("sendAppendEntries : rf %d args.PreIndex = %d and logOffset = %d\n",rf.me,args.PrevLogIndex,rf.logOffset)
 		if count > len(rf.peers)/2 && rf.logs[args.PrevLogIndex + len(args.Entries) - rf.logOffset].Term == rf.currentTerm{
 			rf.commitIndex = Max(rf.commitIndex,rf.matchIndex[server])
-			go rf.commitLogs()
+			//go rf.commitLogs()
 		}
 	}else{
 		rf.nextIndex[server] = reply.FollowerCommit + 1
@@ -649,17 +650,20 @@ func (rf *Raft)transitToCandidate()  {
 // the leader.
 //
 func (rf *Raft)commitLogs()  {
-	rf.mu.Lock()
-	defer rf.mu.Unlock()
-	defer rf.persist()
-	for rf.lastApplied < rf.commitIndex{
-		rf.lastApplied++
-		DPrintf("rf %d commit index = %d  log size = %d and commitIndex = %d and logOffset = %d\n",rf.me,rf.lastApplied,len(rf.logs),rf.commitIndex,rf.logOffset)
-		msg := ApplyMsg{CommandValid:true,Command: rf.logs[rf.lastApplied - rf.logOffset].Command,CommandIndex: rf.lastApplied}
-		//rf.lastApplied++
-		rf.mu.Unlock()
-		rf.applyCh <- msg
+	for rf.killed() == false{
 		rf.mu.Lock()
+		for rf.lastApplied < rf.commitIndex{
+			rf.lastApplied++
+			DPrintf("rf %d commit index = %d  log size = %d and commitIndex = %d and logOffset = %d\n",rf.me,rf.lastApplied,len(rf.logs),rf.commitIndex,rf.logOffset)
+			msg := ApplyMsg{CommandValid:true,Command: rf.logs[rf.lastApplied - rf.logOffset].Command,CommandIndex: rf.lastApplied}
+			//rf.lastApplied++
+			rf.mu.Unlock()
+			rf.applyCh <- msg
+			rf.mu.Lock()
+		}
+		rf.mu.Unlock()
+		rf.persist()
+		time.Sleep(time.Duration(50)*time.Millisecond)
 	}
 	//rf.lastApplied = rf.commitIndex
 	//fmt.Printf("rf %d has commit log,commitindex = %d\n",rf.me,rf.commitIndex)
@@ -845,5 +849,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//rf.mu.Unlock()
 	DPrintf("make : rf %d logs size == %d,logs == %v,commitIndex = %d\n",rf.me,len(rf.logs),rf.logs,rf.commitIndex)
 	go rf.ticker()
+	go rf.commitLogs()
 	return rf
 }
