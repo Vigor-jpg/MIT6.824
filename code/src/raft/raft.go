@@ -335,9 +335,21 @@ func (rf *Raft)AppendEntries(args *AppendEntriesArgs,reply *AppendEntriesReply){
 		//fmt.Printf("rf %d check right -----------------------\n",rf.me)
 		//fmt.Printf("rf %d logs length = %d,preindex = %d,preTerm = % d,log.Term = %d\n",rf.me,len(rf.logs) , args.PrevLogIndex , args.PrevLogTerm , rf.logs[args.PrevLogIndex].Term)
 		DPrintf("AppendEntries : rf %d commitIndex = %d and leader is %d and log size = %d prevIndex = %d and args.commmitIndex = %dand enties = %v and rf.logs = %v\n",rf.me,rf.commitIndex,args.LeaderId,len(rf.logs),args.PrevLogIndex,args.LeaderCommit,args.Entries,rf.logs)
-		rf.logs = rf.logs[:args.PrevLogIndex+1-rf.logOffset]
+		//delete log and append new log
+		//rf.logs = rf.logs[:args.PrevLogIndex+1-rf.logOffset]
+		//rf.logs = append(rf.logs,args.Entries...)
+		//bug fix
+		for i := 0;i < len(args.Entries);i++{
+			if args.PrevLogIndex+1-rf.logOffset + i == len(rf.logs){
+				rf.logs = append(rf.logs,args.Entries[i:]...)
+				break
+			}
+			if args.Entries[i].Term != rf.logs[args.PrevLogIndex + 1 - rf.logOffset + i].Term{
+				rf.logs = append(rf.logs[:args.PrevLogIndex+1-rf.logOffset + i],args.Entries[i:]...)
+			}
+		}
 		//fmt.Printf("rf log size = %d\n",len(rf.logs))
-		rf.logs = append(rf.logs,args.Entries...)
+
 		reply.Success = true
 		reply.Term = rf.currentTerm
 		DPrintf("AppendEntries : rf %d commitIndex = %d and log size = %d and args.commmitIndex = %dand enties = %v and rf.logs = %v\n",rf.me,rf.commitIndex,len(rf.logs),args.LeaderCommit,args.Entries,rf.logs)
