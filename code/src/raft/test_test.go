@@ -22,6 +22,7 @@ import "sync"
 const RaftElectionTimeout = 1000 * time.Millisecond
 
 func TestInitialElection2A(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	//fmt.Printf("1cheack has been over\n")
 	cfg := make_config(t, servers, false, false)
@@ -56,6 +57,7 @@ func TestInitialElection2A(t *testing.T) {
 }
 
 func TestReElection2A(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -96,6 +98,7 @@ func TestReElection2A(t *testing.T) {
 }
 
 func TestManyElections2A(t *testing.T) {
+	DeleteLog()
 	servers := 7
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -103,7 +106,7 @@ func TestManyElections2A(t *testing.T) {
 	cfg.begin("Test (2A): multiple elections")
 
 	cfg.checkOneLeader()
-	fmt.Printf("check1-----------------------------------\n")
+	//fmt.Printf("check1-----------------------------------\n")
 	iters := 10
 	for ii := 1; ii < iters; ii++ {
 		// disconnect three nodes
@@ -119,7 +122,7 @@ func TestManyElections2A(t *testing.T) {
 		// either the current leader should still be alive,
 		// or the remaining four should elect a new one.
 		cfg.checkOneLeader()
-		fmt.Printf("check2 %d-----------------------------------\n",ii)
+		//fmt.Printf("check2 %d-----------------------------------\n",ii)
 		cfg.connect(i1)
 		cfg.connect(i2)
 		cfg.connect(i3)
@@ -134,6 +137,7 @@ func TestManyElections2A(t *testing.T) {
 }
 
 func TestBasicAgree2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -165,6 +169,7 @@ func TestBasicAgree2B(t *testing.T) {
 // each command is sent to each peer just once.
 //
 func TestRPCBytes2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -196,6 +201,7 @@ func TestRPCBytes2B(t *testing.T) {
 }
 
 func TestFailAgree2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -234,6 +240,7 @@ func TestFailAgree2B(t *testing.T) {
 }
 
 func TestFailNoAgree2B(t *testing.T) {
+	DeleteLog()
 	servers := 5
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -286,6 +293,7 @@ func TestFailNoAgree2B(t *testing.T) {
 }
 
 func TestConcurrentStarts2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -389,6 +397,7 @@ loop:
 }
 
 func TestRejoin2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -499,6 +508,7 @@ func TestBackup2B(t *testing.T) {
 	cfg.end()
 }
 func TestCount2B(t *testing.T) {
+	DeleteLog()
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -758,6 +768,7 @@ func TestPersist32C(t *testing.T) {
 // haven't been committed yet.
 //
 func TestFigure82C(t *testing.T) {
+	DeleteLog()
 	servers := 5
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()

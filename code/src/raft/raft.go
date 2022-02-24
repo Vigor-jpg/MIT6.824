@@ -661,8 +661,8 @@ func (rf *Raft)commitLogs()  {
 			rf.applyCh <- msg
 			rf.mu.Lock()
 		}
-		rf.mu.Unlock()
 		rf.persist()
+		rf.mu.Unlock()
 		time.Sleep(time.Duration(50)*time.Millisecond)
 	}
 	//rf.lastApplied = rf.commitIndex

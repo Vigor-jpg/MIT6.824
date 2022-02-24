@@ -10,7 +10,7 @@ import (
 )
 
 // Debugging
-const Debug = true
+const Debug = false
 const FileName = "../log/test.log"
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	msg := fmt.Sprintf(format,a...)
