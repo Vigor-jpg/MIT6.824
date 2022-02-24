@@ -297,6 +297,7 @@ type AppendEntriesArgs struct {
 	PrevLogTerm int
 	Entries []LogEntry
 	LeaderCommit int
+
 }
 type AppendEntriesReply struct {
 	Term int
@@ -323,7 +324,11 @@ func (rf *Raft)AppendEntries(args *AppendEntriesArgs,reply *AppendEntriesReply){
 		rf.transitToFollower()
 	}
 	rf.currentTerm = args.Term
-	//logs conflict
+	//Rpc 过期
+	if rf.logOffset > args.PrevLogIndex {
+		//reply.Valid = false
+		return
+	}
 	DPrintf("AppendEntries : rf %d log size = %d log offset = %d and args.PreIndex = %d\n",rf.me,len(rf.logs),rf.logOffset,args.PrevLogIndex)
 	if len(rf.logs) + rf.logOffset <= args.PrevLogIndex || args.PrevLogTerm != rf.logs[args.PrevLogIndex - rf.logOffset].Term{
 		reply.Success = false
@@ -382,6 +387,10 @@ func (rf *Raft)sendAppendEntries(server int,args *AppendEntriesArgs,reply *Appen
 	defer rf.mu.Unlock()
 	defer rf.persist()
 	if rf.identity != Leader{
+		return
+	}
+	//处理过期Rpc
+	if rf.matchIndex[server] > args.PrevLogIndex + len(args.Entries){
 		return
 	}
 	DPrintf("sendAppendEntries : rf %d been send the heartbeat to raft %d\n",args.LeaderId,server)
