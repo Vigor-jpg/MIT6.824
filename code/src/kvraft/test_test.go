@@ -278,6 +278,7 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 				if (rand.Int() % 1000) < 500 {
 					// log.Printf("%d: client new append %v\n", cli, nv)
 					Append(cfg, myck, key, nv, opLog, cli)
+					fmt.Printf("Append ck %v and key = %v and value = %v\n",myck,key,nv)
 					if !randomkeys {
 						last = NextValue(last, nv)
 					}
@@ -285,11 +286,13 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 				} else if randomkeys && (rand.Int()%1000) < 100 {
 					// we only do this when using random keys, because it would break the
 					// check done after Get() operations
+					fmt.Printf("Put ck %v and key = %v and value = %v\n",myck,key,nv)
 					Put(cfg, myck, key, nv, opLog, cli)
 					j++
 				} else {
 					// log.Printf("%d: client new get %v\n", cli, key)
 					v := Get(cfg, myck, key, opLog, cli)
+					fmt.Printf("Get ck %v and key = %v and value = %v\n",myck,key,nv)
 					// the following check only makes sense when we're not using random keys
 					if !randomkeys && v != last {
 						t.Fatalf("get wrong value, key %v\n, wanted: %v\n, got%v\n", key, last, v)
@@ -400,7 +403,7 @@ func GenericTestSpeed(t *testing.T, part string, maxraftstate int) {
 	DeleteLog()
 	raft.DeleteLog()
 	const nservers = 3
-	const numOps = 1000
+	const numOps = 100
 	cfg := make_config(t, nservers, false, maxraftstate)
 	defer cfg.cleanup()
 

@@ -173,8 +173,8 @@ func (rf *Raft) readPersist(data []byte) {
 		rf.logs = make([]LogEntry,0)
 		rf.logs = append(rf.logs,state.Logs...)
 		rf.currentTerm = state.CurrentTerm
-		rf.commitIndex = state.CommitIndex
-		rf.lastApplied = state.LastReplied
+		rf.commitIndex = state.LogOffset
+		rf.lastApplied = state.LogOffset
 		rf.logOffset = state.LogOffset
 		DPrintf("readPersist : rf %d logs size == %d,logs == %v,commitIndex = %d ,Term = %d\n",rf.me,len(rf.logs),rf.logs,rf.commitIndex,rf.currentTerm)
 	}

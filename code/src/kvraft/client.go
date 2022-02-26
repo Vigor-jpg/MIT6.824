@@ -81,6 +81,8 @@ func (ck *Clerk) Get(key string) string {
 		DPrintf("Client-Get:server = %d ok = %v reply = %v\n",server,ok,reply)
 		server = (server+1)%len(ck.servers)
 		ck.mu.Lock()
+		ck.SequenceId++
+		args.RequestTag.SeqId = ck.SequenceId
 		ck.raftLeader = server
 		ck.mu.Unlock()
 
@@ -120,7 +122,7 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 	ok := false
 	for !ok || reply.Err != OK{
 		reply.Err = OK
-		DPrintf("Client-PutAppend:cmd has been send to kv %d\n",server)
+		DPrintf("Client-PutAppend:%v cmd has been send to kv %d\n",args.Operation,server)
 		ok = ck.servers[server].Call("KVServer.PutAppend",&args,&reply)
 		if reply.Err == OK && ok{
 			return

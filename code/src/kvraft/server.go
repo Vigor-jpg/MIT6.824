@@ -23,7 +23,10 @@ type Op struct {
 	Value string
 	RequestTag Tag
 }
-
+type Response struct {
+	Value string
+	Err Err
+}
 type KVServer struct {
 	mu      sync.Mutex
 	me      int
@@ -36,8 +39,8 @@ type KVServer struct {
 	// Your definitions here.
 	lastApplied int
 	opIndex int
-	kvMap map[string]string
-	kvOp map[Tag]chan string
+	kvMem *StateMachine
+	kvOp map[Tag]chan Response
 	isDuplicate map[Tag] int
 }
 
@@ -68,7 +71,7 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	}
 	ch,ok := kv.kvOp[args.RequestTag]
 	if !ok{
-		ch = make(chan string,1)
+		ch = make(chan Response,1)
 		kv.kvOp[args.RequestTag] = ch
 	}
 	DPrintf("Get : kv %d Tag = %v\n",kv.me,args.RequestTag)
@@ -76,10 +79,14 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	t := time.Now()
 	select {
 	case res := <- ch:
-		reply.Value = res
-		reply.Err = OK
-		close(ch)
-		DPrintf("Get : kv %d has read the channel",kv.me)
+		reply.Err = res.Err
+		reply.Value = res.Value
+		//close(ch)
+		//delete(kv.kvOp,args.RequestTag)
+		/*if _,ok := kv.kvOp[args.RequestTag];ok{
+			DPrintf("channel has been exit!!!")
+		}*/
+		DPrintf("Get : kv %d has read the channel and msg = %v",kv.me,res)
 	case <- time.After(2000*time.Millisecond):
 		reply.Err = ErrTimeOut
 		DPrintf("kv Get= %d time = %v",kv.me,time.Since(t))
@@ -90,7 +97,7 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 
 func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
 	// Your code here.
-	//kv.mu.Lock()
+	kv.mu.Lock()
 	op := Op{
 		Operator: args.Operation,
 		Key: args.Key,
@@ -104,32 +111,36 @@ func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
 	_,_,isLeader := kv.rf.Start(op)
 	if !isLeader{
 		reply.Err = ErrWrongLeader
-		//kv.mu.Unlock()
+		kv.mu.Unlock()
 		//close(ch)
 		return
 	}
 	DPrintf("PutAppend : kv %d is a leader",kv.me)
-	kv.mu.Lock()
+	//kv.mu.Lock()
 	ch,ok := kv.kvOp[args.RequestTag]
 	if !ok{
-		ch = make(chan string,1)
+		ch = make(chan Response,1)
 		kv.kvOp[args.RequestTag] = ch
 	}
 	kv.mu.Unlock()
 	DPrintf("PutAppend : kv %d waiting channel",kv.me)
 	t := time.Now()
 	select {
-	case  <- ch:
+	case  res := <- ch:
 		//reply. = res
-		reply.Err = OK
-		DPrintf("PutAppend : kv %d has read the channel",kv.me)
-		close(ch)
+		//kv.mu.Lock()
+		reply.Err = res.Err
+		DPrintf("PutAppend : kv %d has read the channel and Value = %v",kv.me,res)
+		//close(ch)
+		//delete(kv.kvOp,args.RequestTag)
 	case <- time.After(2000*time.Millisecond):
+		//kv.mu.Lock()
 		reply.Err = ErrTimeOut
 		DPrintf("kv PutAppend : server = %d time = %v",kv.me,time.Since(t))
 		//return
 	}
 	DPrintf("PutAppend : kv %d has return",kv.me)
+	//kv.mu.Unlock()
 }
 func (kv *KVServer) readChan()  {
 	for kv.killed() == false{
@@ -139,59 +150,44 @@ func (kv *KVServer) readChan()  {
 			_,isLeader := kv.rf.GetState()
 			if msg.CommandValid{
 				op := msg.Command.(Op)
+				var res Response
 				DPrintf("readChan : kv %d op = %v",kv.me,op)
-				if n,ok := kv.isDuplicate[op.RequestTag];ok && n > 0{
-					DPrintf("readChan : kv %d has a duplicate log = %v",kv.me,op)
+				if _,ok := kv.isDuplicate[op.RequestTag];ok{
+					if ch,ok := kv.kvOp[op.RequestTag];ok && len(ch) == 0{
+						DPrintf("readChan : kv %d has a duplicate log = %v",kv.me,op)
+						res.Err = OK
+						ch <- res
+					}
+					DPrintf("readChan : kv %d duplicate log has been write",kv.me)
+					kv.mu.Unlock()
 					break
 				}else if !ok{
 					kv.isDuplicate[op.RequestTag] = 1
 				}
 				//kv.mu.Lock()
-
-				var res string
 				//kv.mu.Unlock()
-				if op.Operator == "Get"{
-					if value,ok := kv.kvMap[op.Key];ok{
-						DPrintf("readChan : kv %d pre",kv.me)
-						res = value
-						DPrintf("readChan : kv %d next",kv.me)
-					}else{
-						res = ""
-					}
-				}else{
-					if op.Operator == "Append"{
-						str,ok := kv.kvMap[op.Key]
-						if ok{
-							str += op.Value
-						}else{
-							str = op.Value
-						}
-						kv.kvMap[op.Key] = str
-					}else{
-						kv.kvMap[op.Key] = op.Value
-					}
-					//DPrintf("readChan : kv %d pre chan 's size = %d",kv.me,len(ch))
-					res = "js"
-					//DPrintf("readChan : kv %d next",kv.me)
-				}
+				res = kv.kvMem.Execute(op)
 				DPrintf("readChan : kv %d has bean write chan",kv.me)
 				//kv.isDuplicate[op.RequestTag] = 1
 				if isLeader{
 					ch,ok := kv.kvOp[op.RequestTag]
 					if !ok{
-						ch = make(chan string,1)
+						ch = make(chan Response,1)
 						kv.kvOp[op.RequestTag] = ch
 						DPrintf("readChan : kv %d ch not found",kv.me)
 					}
+					DPrintf("readChan : kv %d ch write tag = %v",kv.me,op.RequestTag)
 					ch <- res
 				}
 			}
+			DPrintf("readChan : kv %d has been exit",kv.me)
 			kv.mu.Unlock()
+
 			//op = msg.Command.(Op)
 		}
-
-
+		DPrintf("readChan : kv %d has been exit select",kv.me)
 	}
+	DPrintf("readChan : kv %d has been exit for",kv.me)
 }
 //
 // the tester calls Kill() when a KVServer instance won't
@@ -207,6 +203,7 @@ func (kv *KVServer) Kill() {
 	atomic.StoreInt32(&kv.dead, 1)
 	kv.rf.Kill()
 	// Your code here, if desired.
+
 }
 
 func (kv *KVServer) killed() bool {
@@ -228,24 +225,24 @@ func (kv *KVServer) killed() bool {
 // StartKVServer() must return quickly, so it should start goroutines
 // for any long-running work.
 //
+
+func (kv *KVServer)StateMachineInit(persister *raft.Persister)  {
+
+}
 func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister, maxraftstate int) *KVServer {
 	// call labgob.Register on structures you want
 	// Go's RPC library to marshall/unmarshall.
 	labgob.Register(Op{})
-
 	kv := new(KVServer)
 	kv.me = me
 	kv.maxraftstate = maxraftstate
-
 	// You may need initialization code here.
-
 	kv.applyCh = make(chan raft.ApplyMsg)
-	kv.kvMap = make(map[string]string)
-	kv.kvOp = make(map[Tag]chan string)
+	kv.kvMem = MakeStateMachine()
+	kv.kvOp = make(map[Tag]chan Response)
 	kv.isDuplicate = make(map[Tag]int)
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
 	go kv.readChan()
 	// You may need initialization code here.
-
 	return kv
 }
