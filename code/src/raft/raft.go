@@ -684,7 +684,7 @@ func (rf *Raft)commitLogs()  {
 		}
 		rf.persist()
 		rf.mu.Unlock()
-		time.Sleep(time.Duration(50)*time.Millisecond)
+		//time.Sleep(time.Duration(50)*time.Millisecond)
 	}
 	//rf.lastApplied = rf.commitIndex
 	//fmt.Printf("rf %d has commit log,commitindex = %d\n",rf.me,rf.commitIndex)

@@ -114,7 +114,7 @@ func spawn_clients_and_wait(t *testing.T, cfg *config, ncli int, fn func(me int,
 	ca := make([]chan bool, ncli)
 	for cli := 0; cli < ncli; cli++ {
 		ca[cli] = make(chan bool)
-		fmt.Printf("spawn_clients_and_wait : run_client\n")
+		//fmt.Printf("spawn_clients_and_wait : run_client\n")
 		go run_client(t, cfg, cli, ca[cli], fn)
 	}
 	// log.Printf("spawn_clients_and_wait: waiting for clients")
@@ -253,7 +253,7 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 		clnts[i] = make(chan int)
 	}
 	for i := 0; i < 3; i++ {
-		fmt.Printf("Iteration %v num of client = %d \n", i,nclients)
+		// fmt.Printf("Iteration %v num of client = %d \n", i,nclients)
 		atomic.StoreInt32(&done_clients, 0)
 		atomic.StoreInt32(&done_partitioner, 0)
 		go spawn_clients_and_wait(t, cfg, nclients, func(cli int, myck *Clerk, t *testing.T) {
@@ -278,7 +278,7 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 				if (rand.Int() % 1000) < 500 {
 					// log.Printf("%d: client new append %v\n", cli, nv)
 					Append(cfg, myck, key, nv, opLog, cli)
-					fmt.Printf("Append ck %v and key = %v and value = %v\n",myck,key,nv)
+					//fmt.Printf("Append ck %v and key = %v and value = %v\n",myck,key,nv)
 					if !randomkeys {
 						last = NextValue(last, nv)
 					}
@@ -286,22 +286,22 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 				} else if randomkeys && (rand.Int()%1000) < 100 {
 					// we only do this when using random keys, because it would break the
 					// check done after Get() operations
-					fmt.Printf("Put ck %v and key = %v and value = %v\n",myck,key,nv)
+					//fmt.Printf("Put ck %v and key = %v and value = %v\n",myck,key,nv)
 					Put(cfg, myck, key, nv, opLog, cli)
 					j++
 				} else {
 					// log.Printf("%d: client new get %v\n", cli, key)
 					v := Get(cfg, myck, key, opLog, cli)
-					fmt.Printf("Get ck %v and key = %v and value = %v\n",myck,key,nv)
+					//fmt.Printf("Get ck %v and key = %v and value = %v\n",myck,key,nv)
 					// the following check only makes sense when we're not using random keys
 					if !randomkeys && v != last {
 						t.Fatalf("get wrong value, key %v\n, wanted: %v\n, got%v\n", key, last, v)
 					}
 				}
 				count++
-				fmt.Printf("count == %d\n",count)
+				//fmt.Printf("count == %d\n",count)
 			}
-			fmt.Printf("gorouit exit\n")
+			//fmt.Printf("gorouit exit\n")
 		})
 		//clnts[0] <- 0
 		if partitions {
@@ -341,18 +341,18 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 			cfg.ConnectAll()
 		}
 
-		fmt.Printf("wait for clients\n")
+		//fmt.Printf("wait for clients\n")
 		for i := 0; i < nclients; i++ {
-			fmt.Printf("read from clients %d\n", i)
+			//fmt.Printf("read from clients %d\n", i)
 			j := <-clnts[i]
 			//j := 0
 			// if j < 10 {
 			// 	log.Printf("Warning: client %d managed to perform only %d put operations in 1 sec?\n", i, j)
 			// }
 			key := strconv.Itoa(i)
-			fmt.Printf("Check %v for client %d\n", j, i)
+			//fmt.Printf("Check %v for client %d\n", j, i)
 			v := Get(cfg, ck, key, opLog, i)
-			fmt.Printf("Get %v for client %d\n", v, i)
+			//fmt.Printf("Get %v for client %d\n", v, i)
 			if !randomkeys {
 				checkClntAppends(t, i, v, j)
 			}
@@ -374,7 +374,7 @@ func GenericTest(t *testing.T, part string, nclients int, nservers int, unreliab
 			}
 		}
 	}
-	fmt.Printf("Model = %v and size = %d  and opLog = \n",models.KvModel,len(opLog.operations))
+	//fmt.Printf("Model = %v and size = %d  and opLog = \n",models.KvModel,len(opLog.operations))
 
 	res, info := porcupine.CheckOperationsVerbose(models.KvModel, opLog.Read(), linearizabilityCheckTimeout)
 	if res == porcupine.Illegal {
@@ -418,10 +418,10 @@ func GenericTestSpeed(t *testing.T, part string, maxraftstate int) {
 	start := time.Now()
 	for i := 0; i < numOps; i++ {
 		ck.Append("x", "x 0 "+strconv.Itoa(i)+" y")
-		fmt.Printf("count = %d\n",i)
+		//fmt.Printf("count = %d\n",i)
 	}
 	dur := time.Since(start)
-	fmt.Printf("time = %d\n",dur)
+	//fmt.Printf("time = %d\n",dur)
 	v := ck.Get("x")
 	checkClntAppends(t, 0, v, numOps)
 
