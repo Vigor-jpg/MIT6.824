@@ -4,6 +4,8 @@ import (
 	"6.824/labgob"
 	"6.824/labrpc"
 	"6.824/raft"
+	"bytes"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,7 +35,7 @@ type KVServer struct {
 	rf      *raft.Raft
 	applyCh chan raft.ApplyMsg
 	dead    int32 // set by Kill()
-
+	logOffset int
 	maxraftstate int // snapshot if log grows this big
 	
 	// Your definitions here.
@@ -43,7 +45,10 @@ type KVServer struct {
 	kvOp map[Tag]chan Response
 	isDuplicate map[Tag] int
 }
-
+type KVSnapShot struct {
+	Mem map[string]string
+	//LogOffset int
+}
 func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	// Your code here.
 
@@ -142,6 +147,32 @@ func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
 	DPrintf("PutAppend : kv %d has return",kv.me)
 	//kv.mu.Unlock()
 }
+func (kv *KVServer) makeSnapShot() []byte{
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	snapshot := KVSnapShot{
+		Mem: kv.kvMem.getMem(),
+	}
+	if err := e.Encode(snapshot);err != nil{
+		log.Fatal(err)
+	}
+	return w.Bytes()
+}
+func (kv *KVServer)readSnapShot(data []byte,lastIndex int)  {
+	if len(data) == 0 || lastIndex <= kv.lastApplied{
+		return
+	}
+	w := bytes.NewBuffer(data)
+	d := labgob.NewDecoder(w)
+	snapshot := KVSnapShot{}
+	if err := d.Decode(&snapshot);err != nil{
+		log.Fatal(err)
+	}else{
+		kv.kvMem.initMem(snapshot.Mem)
+		kv.logOffset = lastIndex
+		kv.lastApplied = lastIndex
+	}
+}
 func (kv *KVServer) readChan()  {
 	for kv.killed() == false{
 		select {
@@ -152,6 +183,15 @@ func (kv *KVServer) readChan()  {
 				op := msg.Command.(Op)
 				var res Response
 				DPrintf("readChan : kv %d op = %v",kv.me,op)
+				if msg.CommandIndex < kv.lastApplied {
+					kv.mu.Unlock()
+					continue
+				}
+				kv.lastApplied = msg.CommandIndex
+				if kv.lastApplied - kv.logOffset > kv.maxraftstate{
+					snapshot := kv.makeSnapShot()
+					kv.rf.Snapshot(msg.CommandIndex,snapshot)
+				}
 				if _,ok := kv.isDuplicate[op.RequestTag];ok{
 					if ch,ok := kv.kvOp[op.RequestTag];ok && len(ch) == 0{
 						DPrintf("readChan : kv %d has a duplicate log = %v",kv.me,op)
@@ -160,7 +200,8 @@ func (kv *KVServer) readChan()  {
 					}
 					DPrintf("readChan : kv %d duplicate log has been write",kv.me)
 					kv.mu.Unlock()
-					break
+					//break
+					continue
 				}else if !ok{
 					kv.isDuplicate[op.RequestTag] = 1
 				}
@@ -179,10 +220,11 @@ func (kv *KVServer) readChan()  {
 					DPrintf("readChan : kv %d ch write tag = %v",kv.me,op.RequestTag)
 					ch <- res
 				}
+			}else if msg.SnapshotValid{
+				kv.readSnapShot(msg.Snapshot,msg.SnapshotIndex)
 			}
 			DPrintf("readChan : kv %d has been exit",kv.me)
 			kv.mu.Unlock()
-
 			//op = msg.Command.(Op)
 		}
 		DPrintf("readChan : kv %d has been exit select",kv.me)
@@ -226,7 +268,7 @@ func (kv *KVServer) killed() bool {
 // for any long-running work.
 //
 
-func (kv *KVServer)StateMachineInit(persister *raft.Persister)  {
+func (kv *KVServer)readPersist(persister *raft.Persister)  {
 
 }
 func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister, maxraftstate int) *KVServer {
@@ -242,6 +284,7 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.kvOp = make(map[Tag]chan Response)
 	kv.isDuplicate = make(map[Tag]int)
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
+	kv.logOffset = 0
 	go kv.readChan()
 	// You may need initialization code here.
 	return kv

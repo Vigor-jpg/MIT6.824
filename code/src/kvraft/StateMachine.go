@@ -10,6 +10,12 @@ func MakeStateMachine() *StateMachine {
 		KV: make(map[string]string),
 	}
 }
+func (vm *StateMachine)initMem(m map[string]string)  {
+	vm.KV = m
+}
+func (vm *StateMachine)getMem() map[string]string {
+	return vm.KV
+}
 func (vm *StateMachine) Execute(op Op)  Response{
 	res := Response{}
 	if op.Operator == "Get"{

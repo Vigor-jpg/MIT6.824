@@ -213,8 +213,15 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs,reply *InstallSnapshot
 		SnapshotTerm: args.LastIncludedTerm,
 		Snapshot: clone(args.Data),
 	}
+	rf.lastApplied = args.LastIncludesIndex
 	rf.mu.Unlock()
 	rf.applyCh <- msg
+	/*rf.mu.Lock()
+	rf.commitIndex = rf.lastApplied
+	rf.mu.Unlock()
+	go func() {
+
+	}()*/
 }
 func (rf *Raft) sendInstallSnapshot(server int)  {
 	rf.mu.Lock()
@@ -673,6 +680,8 @@ func (rf *Raft)transitToCandidate()  {
 func (rf *Raft)commitLogs()  {
 	for rf.killed() == false{
 		rf.mu.Lock()
+		flag := false
+
 		for rf.lastApplied < rf.commitIndex{
 			rf.lastApplied++
 			DPrintf("rf %d commit index = %d  log size = %d and commitIndex = %d and logOffset = %d\n",rf.me,rf.lastApplied,len(rf.logs),rf.commitIndex,rf.logOffset)
@@ -681,8 +690,11 @@ func (rf *Raft)commitLogs()  {
 			rf.mu.Unlock()
 			rf.applyCh <- msg
 			rf.mu.Lock()
+			flag = true
 		}
-		rf.persist()
+		if flag{
+			rf.persist()
+		}
 		rf.mu.Unlock()
 		//time.Sleep(time.Duration(50)*time.Millisecond)
 	}
@@ -863,7 +875,14 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 	DPrintf("make init1 : rf %d logs size == %d,logs == %v\n",rf.me,len(rf.logs),rf.logs)
-
+	/*msg := ApplyMsg{
+		CommandValid: false,
+		SnapshotValid: true,
+		SnapshotIndex: rf.logOffset,
+		SnapshotTerm: rf.currentTerm,
+		Snapshot: persister.ReadSnapshot(),
+	}
+	applyCh <- msg*/
 	rf.identity = Follower
 	//rf.logs = append(initLog,rf.logs...)
 	// start ticker goroutine to start elections
